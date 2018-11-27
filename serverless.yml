@@ -11,6 +11,8 @@ custom:
   region: "${opt:region, 'us-east-2'}"
   log_level: "${env:LOG_LEVEL, 'INFO'}"
 
+  sevrice_url_path_base: '/locate'
+
   pythonRequirements:
     dockerizePip: false
 
@@ -36,12 +38,12 @@ functions:
     timeout: 10
     events:
       - http:
-          path: /locate/{id}
+          path: "${self:custom.sevrice_url_path_base}/{id}"
           method: get
 
 resources:
   Resources:
-    FleetLocationUrlSsmParam:
+    ServiceUrlSsmParam:
       Type: "AWS::SSM::Parameter"
       Properties:
         Name: "/${self:service}/${self:provider.stage}/URL"
@@ -54,6 +56,7 @@ resources:
               - ".execute-api."
               - Ref: AWS::Region
               - ".amazonaws.com/${self:custom.stage}"
+              - "${self:custom.sevrice_url_path_base}"
 
   Outputs:
     ServiceUrl:
@@ -66,6 +69,7 @@ resources:
             - ".execute-api."
             - Ref: AWS::Region
             - ".amazonaws.com/${self:custom.stage}"
+            - "${self:custom.sevrice_url_path_base}"
       Export:
         Name: "${self:service}-${self:provider.stage}-ServiceUrl"
 
