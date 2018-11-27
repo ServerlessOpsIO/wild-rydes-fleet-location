@@ -1,0 +1,70 @@
+# communicate with members of the fleet
+service: wild-rydes-fleet-location
+
+plugins:
+  - serverless-python-requirements
+
+
+custom:
+  stage: "${opt:stage, env:SLS_STAGE, 'dev'}"
+  profile: "${opt:aws-profile, env:AWS_PROFILE, env:AWS_DEFAULT_PROFILE, 'default'}"
+  log_level: "${env:LOG_LEVEL, 'INFO'}"
+
+  pythonRequirements:
+    dockerizePip: false
+
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: ${self:custom.stage}
+  profile: ${self:custom.profile}
+  environment:
+    LOG_LEVEL: ${self:custom.log_level}
+  stackTags:
+    x-service: ${self:service}
+    x-stack: ${self:service}-${self:provider.stage}
+
+
+functions:
+  GetLocationById:
+    handler: handlers/get_location_by_id.handler
+    description: "Locate a member of the ride fleet"
+    memorySize: 128
+    timeout: 10
+    events:
+      - http:
+          path: /locate/{id}
+          method: get
+
+resources:
+  Resources:
+    FleetLocationUrlSsmParam:
+      Type: "AWS::SSM::Parameter"
+      Properties:
+        Name: "/${self:service}/${self:provider.stage}/URL"
+        Type: String
+        Value:
+          Fn::Join:
+            - ""
+            - - "https://"
+              - Ref: ApiGatewayRestApi
+              - ".execute-api."
+              - Ref: AWS::Region
+              - ".amazonaws.com/${self:custom.stage}"
+
+  Outputs:
+    ServiceUrl:
+      Description: "URL for the deployed API on API Gateway"
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: ApiGatewayRestApi
+            - ".execute-api."
+            - Ref: AWS::Region
+            - ".amazonaws.com/${self:custom.stage}"
+      Export:
+        Name: "${self:service}-${self:provider.stage}-ServiceUrl"
+
+
